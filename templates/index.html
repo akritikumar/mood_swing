@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoodFlow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- ── SIDEBAR NAV ── -->
+  <nav class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">🌸</span>
+      <span class="logo-text">MoodFlow</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" class="nav-link active" data-tab="mood">
+        <span class="nav-icon">✨</span> Today's Mood
+      </a></li>
+      <li><a href="#" class="nav-link" data-tab="timer">
+        <span class="nav-icon">⏱️</span> Focus Timer
+      </a></li>
+      <li><a href="#" class="nav-link" data-tab="journal">
+        <span class="nav-icon">📓</span> Journal
+      </a></li>
+      <li><a href="#" class="nav-link" data-tab="trends">
+        <span class="nav-icon">📈</span> Trends
+      </a></li>
+    </ul>
+    <div class="sidebar-footer">made with 💗 for your wellbeing</div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main">
+
+    <!-- ════ TAB: MOOD ════ -->
+    <section class="tab-panel active" id="tab-mood">
+      <div class="panel-header">
+        <h1 class="panel-title">How are you feeling today?</h1>
+        <p class="panel-sub">Tap one emoji to capture your mood.</p>
+      </div>
+
+      <div class="emoji-grid" id="emojiGrid">
+        <button class="emoji-btn" data-emoji="😊" data-label="happy">😊<span>Happy</span></button>
+        <button class="emoji-btn" data-emoji="😌" data-label="calm">😌<span>Calm</span></button>
+        <button class="emoji-btn" data-emoji="🥰" data-label="grateful">🥰<span>Grateful</span></button>
+        <button class="emoji-btn" data-emoji="😤" data-label="frustrated">😤<span>Frustrated</span></button>
+        <button class="emoji-btn" data-emoji="😔" data-label="sad">😔<span>Sad</span></button>
+        <button class="emoji-btn" data-emoji="😰" data-label="anxious">😰<span>Anxious</span></button>
+        <button class="emoji-btn" data-emoji="😴" data-label="tired">😴<span>Tired</span></button>
+        <button class="emoji-btn" data-emoji="🤩" data-label="excited">🤩<span>Excited</span></button>
+        <button class="emoji-btn" data-emoji="😑" data-label="numb">😑<span>Numb</span></button>
+      </div>
+
+      <div class="card suggestion-card hidden" id="suggestionCard">
+        <div class="card-label">✨ Today's suggestion</div>
+        <p id="suggestionText"></p>
+      </div>
+
+      <div class="loader hidden" id="moodLoader">
+        <div class="spinner"></div><span>Getting your suggestion…</span>
+      </div>
+    </section>
+
+    <!-- ════ TAB: TIMER ════ -->
+    <section class="tab-panel" id="tab-timer">
+      <div class="panel-header">
+        <h1 class="panel-title">Anti-Procrastination Timer</h1>
+        <p class="panel-sub">Break any task into 2-minute sprints. Just start — that's the hardest part.</p>
+      </div>
+
+      <div class="timer-card card">
+        <input class="task-input" id="taskInput" type="text" placeholder="What are you working on?" />
+
+        <div class="timer-display" id="timerDisplay">2:00</div>
+
+        <div class="timer-controls">
+          <button class="btn btn-primary" id="startBtn">▶ Start</button>
+          <button class="btn btn-ghost" id="resetBtn">↺ Reset</button>
+        </div>
+
+        <div class="session-counter">
+          Sessions completed today: <strong id="sessionCount">0</strong>
+        </div>
+      </div>
+
+      <div class="card celebration-card hidden" id="celebrationCard">
+        <div class="card-label">🎉 Great work!</div>
+        <p id="celebrationText"></p>
+      </div>
+
+      <div class="loader hidden" id="timerLoader">
+        <div class="spinner"></div><span>Getting your reward…</span>
+      </div>
+    </section>
+
+    <!-- ════ TAB: JOURNAL ════ -->
+    <section class="tab-panel" id="tab-journal">
+      <div class="panel-header">
+        <h1 class="panel-title">Journal</h1>
+        <p class="panel-sub">A gentle space to reflect and grow.</p>
+      </div>
+
+      <div class="journal-mood-row">
+        <label>Current mood:</label>
+        <select id="journalMoodSelect">
+          <option value="happy">😊 Happy</option>
+          <option value="calm">😌 Calm</option>
+          <option value="grateful">🥰 Grateful</option>
+          <option value="frustrated">😤 Frustrated</option>
+          <option value="sad">😔 Sad</option>
+          <option value="anxious">😰 Anxious</option>
+          <option value="tired">😴 Tired</option>
+          <option value="excited">🤩 Excited</option>
+        </select>
+        <button class="btn btn-secondary" id="getPromptBtn">Get a prompt ✨</button>
+      </div>
+
+      <div class="card prompt-card hidden" id="promptCard">
+        <div class="card-label">📓 Today's prompt</div>
+        <p id="promptText"></p>
+      </div>
+
+      <div class="loader hidden" id="promptLoader">
+        <div class="spinner"></div><span>Crafting your prompt…</span>
+      </div>
+
+      <textarea class="journal-textarea" id="journalEntry" placeholder="Start writing here… there's no right or wrong."></textarea>
+
+      <button class="btn btn-primary" id="reflectBtn">Get reflection 💬</button>
+
+      <div class="card reflection-card hidden" id="reflectionCard">
+        <div class="card-label">💬 Reflection</div>
+        <p id="reflectionText"></p>
+      </div>
+
+      <div class="loader hidden" id="reflectLoader">
+        <div class="spinner"></div><span>Reading your entry…</span>
+      </div>
+    </section>
+
+    <!-- ════ TAB: TRENDS ════ -->
+    <section class="tab-panel" id="tab-trends">
+      <div class="panel-header">
+        <h1 class="panel-title">Your Mood Trends</h1>
+        <p class="panel-sub">Patterns in your emotional landscape.</p>
+      </div>
+
+      <canvas id="moodChart"></canvas>
+
+      <button class="btn btn-secondary" id="insightBtn" style="margin-top:1.5rem">✨ Get AI insight</button>
+
+      <div class="card insight-card hidden" id="insightCard">
+        <div class="card-label">🔍 Trend insight</div>
+        <p id="insightText"></p>
+      </div>
+
+      <div class="loader hidden" id="insightLoader">
+        <div class="spinner"></div><span>Analyzing your moods…</span>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
