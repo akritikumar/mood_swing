@@ -69,11 +69,18 @@
     <section class="tab-panel" id="tab-timer">
       <div class="panel-header">
         <h1 class="panel-title">Anti-Procrastination Timer</h1>
-        <p class="panel-sub">Break any task into 2-minute sprints. Just start — that's the hardest part.</p>
+        <p class="panel-sub">Break any task into focused sprints. Just start — that's the hardest part.</p>
       </div>
 
       <div class="timer-card card">
         <input class="task-input" id="taskInput" type="text" placeholder="What are you working on?" />
+
+        <div class="duration-selector">
+          <button class="duration-btn active" data-seconds="120">2 min</button>
+          <button class="duration-btn" data-seconds="300">5 min</button>
+          <button class="duration-btn" data-seconds="600">10 min</button>
+          <button class="duration-btn" data-seconds="900">15 min</button>
+        </div>
 
         <div class="timer-display" id="timerDisplay">2:00</div>
 
@@ -94,6 +101,37 @@
 
       <div class="loader hidden" id="timerLoader">
         <div class="spinner"></div><span>Getting your reward…</span>
+      </div>
+
+      <!-- ── STUDY ASSISTANT ── -->
+      <div class="panel-header" style="margin-top: 3rem;">
+        <h2 class="panel-title" style="font-size:1.5rem">📚 Study Assistant</h2>
+        <p class="panel-sub">Enter a topic and let AI help you study it.</p>
+      </div>
+
+      <div class="card study-card">
+        <input class="task-input" id="studyTopic" type="text" placeholder="e.g. The French Revolution, Photosynthesis, Calculus derivatives…" style="margin-bottom:1rem" />
+
+        <div class="study-mode-row">
+          <label>I want to:</label>
+          <select id="studyMode">
+            <option value="explain">📖 Explain it simply</option>
+            <option value="quiz">❓ Quiz me on it</option>
+            <option value="summarize">📝 Give me a summary</option>
+            <option value="flashcards">🃏 Make flashcards</option>
+            <option value="essay">✍️ Help me outline an essay</option>
+          </select>
+          <button class="btn btn-primary" id="studyBtn">Let's go ✨</button>
+        </div>
+      </div>
+
+      <div class="loader hidden" id="studyLoader">
+        <div class="spinner"></div><span>Preparing your study material…</span>
+      </div>
+
+      <div class="card study-result-card hidden" id="studyResultCard">
+        <div class="card-label" id="studyResultLabel">📚 Study material</div>
+        <div id="studyResultText"></div>
       </div>
     </section>
 
@@ -149,7 +187,9 @@
         <p class="panel-sub">Patterns in your emotional landscape.</p>
       </div>
 
-      <canvas id="moodChart"></canvas>
+      <div class="chart-wrapper">
+        <canvas id="moodChart"></canvas>
+      </div>
 
       <button class="btn btn-secondary" id="insightBtn" style="margin-top:1.5rem">✨ Get AI insight</button>
 
@@ -160,6 +200,17 @@
 
       <div class="loader hidden" id="insightLoader">
         <div class="spinner"></div><span>Analyzing your moods…</span>
+      </div>
+
+      <!-- ── STUDY SESSIONS DOT PLOT ── -->
+      <div class="panel-header" style="margin-top: 3rem;">
+        <h2 class="panel-title" style="font-size:1.5rem">⏱️ Study Sessions</h2>
+        <p class="panel-sub">How often you've used each timer duration. Hover over a dot to see the session name.</p>
+      </div>
+
+      <div class="chart-wrapper">
+        <canvas id="sessionChart"></canvas>
+        <p class="chart-empty hidden" id="sessionEmpty">No sessions logged yet — complete a timer to see your data here! 🌱</p>
       </div>
     </section>
 

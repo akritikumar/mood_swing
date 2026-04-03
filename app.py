@@ -5,7 +5,8 @@ from datetime import datetime, date
 import anthropic
 
 app = Flask(__name__)
-DATA_FILE = "data/moods.json"
+DATA_FILE     = "data/moods.json"
+SESSIONS_FILE = "data/sessions.json"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,17 @@ def load_data():
 def save_data(data):
     os.makedirs("data", exist_ok=True)
     with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_sessions():
+    if not os.path.exists(SESSIONS_FILE):
+        return []
+    with open(SESSIONS_FILE, "r") as f:
+        return json.load(f)
+
+def save_sessions(data):
+    os.makedirs("data", exist_ok=True)
+    with open(SESSIONS_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
 def call_claude(prompt: str, system: str = "") -> str:
@@ -103,19 +115,54 @@ def trends():
 
 # ---------- timer (no AI needed) ----------------------------------------------
 
-# Timer is handled entirely on the front-end; this endpoint just returns
-# a motivational nudge when a session completes.
+# Timer is handled entirely on the front-end; this endpoint logs the session
+# and returns a motivational nudge when a session completes.
 @app.route("/api/timer-complete", methods=["POST"])
 def timer_complete():
-    body  = request.json
-    task  = body.get("task", "your task")
-    count = body.get("sessionsCompleted", 1)
+    body     = request.json
+    task     = body.get("task", "your task")
+    count    = body.get("sessionsCompleted", 1)
+    minutes  = body.get("minutes", 2)
+    now      = datetime.now().isoformat(timespec="seconds")
+
+    # Save the session
+    sessions = load_sessions()
+    sessions.append({"task": task, "minutes": minutes, "timestamp": now})
+    save_sessions(sessions)
+
     msg = call_claude(
-        f"The user just completed a 2-minute focus session on '{task}'. "
+        f"The user just completed a {minutes}-minute focus session on '{task}'. "
         f"They've done {count} session(s) in a row. "
         "Give them a short, enthusiastic 1-sentence celebration."
     )
     return jsonify({"message": msg})
+
+@app.route("/api/sessions")
+def get_sessions():
+    return jsonify(load_sessions())
+
+# ---------- study assistant ---------------------------------------------------
+
+@app.route("/api/study", methods=["POST"])
+def study():
+    body  = request.json
+    topic = body.get("topic", "")
+    mode  = body.get("mode", "explain")
+
+    prompts = {
+        "explain":    f"Explain '{topic}' simply and clearly for a student. Use plain language, a brief overview, and 2-3 key points.",
+        "quiz":       f"Create a 5-question quiz on '{topic}'. Number each question, and put the answers at the bottom separated by a line.",
+        "summarize":  f"Give a concise study summary of '{topic}' in bullet points covering the most important facts a student should know.",
+        "flashcards": f"Create 6 flashcards for studying '{topic}'. Format each as:\nQ: [question]\nA: [answer]\n",
+        "essay":      f"Create a structured essay outline on '{topic}' with an intro, 3 main body sections with sub-points, and a conclusion.",
+    }
+
+    result = call_claude(
+        prompts.get(mode, prompts["explain"]),
+        system="You are a helpful, encouraging study tutor. Be clear, structured, and student-friendly."
+    )
+    return jsonify({"result": result})
+
 
 if __name__ == "__main__":
     app.run(debug=True)

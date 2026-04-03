@@ -286,13 +286,69 @@ select {
 .journal-textarea:focus { border-color: var(--accent3); }
 .journal-textarea::placeholder { color: var(--text-muted); }
 
+/* ── DURATION SELECTOR ───────────────────────────────────────────────────── */
+.duration-selector {
+  display: flex;
+  gap: .6rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.duration-btn {
+  padding: .45rem 1.1rem;
+  border-radius: 100px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: .85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.duration-btn:hover { border-color: var(--accent1); color: var(--text); }
+.duration-btn.active {
+  background: linear-gradient(135deg, #fce4e8, #fdf5f0);
+  border-color: var(--accent1);
+  color: var(--text);
+}
+
+/* ── STUDY ASSISTANT ─────────────────────────────────────────────────────── */
+.study-card { padding: 1.5rem; }
+.study-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.study-mode-row label { font-size: .9rem; color: var(--text-muted); }
+.study-result-card { border-left: 4px solid var(--accent3); }
+.study-result-card #studyResultText {
+  line-height: 1.8;
+  font-size: .97rem;
+  white-space: pre-wrap;
+}
+
 /* ── TRENDS ─────────────────────────────────────────────────────────────── */
-#moodChart {
+.chart-wrapper {
+  position: relative;
   background: var(--surface);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   padding: 1.25rem;
-  max-height: 340px;
+  margin-top: .5rem;
+}
+.chart-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .95rem;
+  padding: 2rem 0;
+}
+#moodChart {
+  max-height: 300px;
+}
+
+#sessionChart {
+  max-height: 320px;
 }
 
 /* ── LOADER ─────────────────────────────────────────────────────────────── */
