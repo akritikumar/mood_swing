@@ -1,39 +1,60 @@
 from flask import Flask, render_template, request, jsonify
-import json
+import sqlite3
 import os
 from datetime import datetime, date
 import anthropic
 
 app = Flask(__name__)
-DATA_FILE     = "data/moods.json"
-SESSIONS_FILE = "data/sessions.json"
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+DB_PATH = "data/moodflow.db"
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+# ── database setup ────────────────────────────────────────────────────────────
+# Called once when the app starts. Creates the database file and tables
+# if they don't already exist.
 
-def save_data(data):
+def init_db():
     os.makedirs("data", exist_ok=True)
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
 
-def load_sessions():
-    if not os.path.exists(SESSIONS_FILE):
-        return []
-    with open(SESSIONS_FILE, "r") as f:
-        return json.load(f)
+    # Table 1: one mood entry per day
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS moods (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            date      TEXT    UNIQUE NOT NULL,
+            emoji     TEXT    NOT NULL,
+            label     TEXT    NOT NULL
+        )
+    """)
 
-def save_sessions(data):
-    os.makedirs("data", exist_ok=True)
-    with open(SESSIONS_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    # Table 2: every completed focus/study session
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            task      TEXT    NOT NULL,
+            minutes   REAL    NOT NULL,
+            timestamp TEXT    NOT NULL
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def get_db():
+    """Open a database connection with row_factory so rows behave like dicts."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row   # lets us do row["column"] instead of row[0]
+    return conn
+
+
+# Initialise the database when the app first loads
+init_db()
+
+# ── claude helper ─────────────────────────────────────────────────────────────
 
 def call_claude(prompt: str, system: str = "") -> str:
-    client = anthropic.Anthropic()          # reads ANTHROPIC_API_KEY from env
+    client = anthropic.Anthropic()   # reads ANTHROPIC_API_KEY from env
     msg = client.messages.create(
         model="claude-opus-4-5",
         max_tokens=512,
@@ -52,45 +73,50 @@ def index():
 
 @app.route("/api/log-mood", methods=["POST"])
 def log_mood():
-    body   = request.json
-    emoji  = body.get("emoji")
-    label  = body.get("label")
-    today  = date.today().isoformat()
+    body  = request.json
+    emoji = body.get("emoji")
+    label = body.get("label")
+    today = date.today().isoformat()
 
-    data = load_data()
+    conn = get_db()
+    # INSERT OR REPLACE enforces one entry per day (UNIQUE constraint on date)
+    conn.execute(
+        "INSERT OR REPLACE INTO moods (date, emoji, label) VALUES (?, ?, ?)",
+        (today, emoji, label)
+    )
+    conn.commit()
+    conn.close()
 
-    # Only one entry per day
-    data = [d for d in data if d["date"] != today]
-    data.append({"date": today, "emoji": emoji, "label": label})
-    save_data(data)
-
-    # Ask Claude for a personalised suggestion
     suggestion = call_claude(
         f"The user feels {label} today (emoji: {emoji}). "
         "Give them one warm, specific activity suggestion in 2-3 sentences."
     )
     return jsonify({"suggestion": suggestion})
 
+
 @app.route("/api/moods")
 def get_moods():
-    return jsonify(load_data())
+    conn = get_db()
+    rows = conn.execute("SELECT date, emoji, label FROM moods ORDER BY date ASC").fetchall()
+    conn.close()
+    # Convert sqlite3.Row objects to plain dicts for jsonify
+    return jsonify([dict(r) for r in rows])
 
 # ---------- journal ------------------------------------------------------------
 
 @app.route("/api/journal-prompt", methods=["POST"])
 def journal_prompt():
-    body  = request.json
-    mood  = body.get("mood", "neutral")
+    mood = request.json.get("mood", "neutral")
     prompt = call_claude(
         f"The user is feeling {mood}. Generate one thoughtful, open-ended journaling prompt "
         "that encourages positive thinking and gratitude. Just the prompt, no preamble."
     )
     return jsonify({"prompt": prompt})
 
+
 @app.route("/api/journal-reflect", methods=["POST"])
 def journal_reflect():
-    body   = request.json
-    entry  = body.get("entry", "")
+    entry = request.json.get("entry", "")
     reflection = call_claude(
         f"The user wrote this journal entry:\n\n{entry}\n\n"
         "Respond with a warm, 2-3 sentence reflection that validates their feelings and highlights a positive insight.",
@@ -102,10 +128,16 @@ def journal_reflect():
 
 @app.route("/api/trends", methods=["POST"])
 def trends():
-    data = load_data()
-    if len(data) < 3:
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT date, label FROM moods ORDER BY date DESC LIMIT 14"
+    ).fetchall()
+    conn.close()
+
+    if len(rows) < 3:
         return jsonify({"insight": "Keep logging your moods — insights appear after a few days! 🌱"})
-    summary = ", ".join([f"{d['date']}: {d['label']}" for d in data[-14:]])
+
+    summary = ", ".join([f"{r['date']}: {r['label']}" for r in reversed(rows)])
     insight = call_claude(
         f"Here are the user's recent mood logs (last 14 days):\n{summary}\n\n"
         "Identify any patterns or trends and give a gentle, encouraging 2-3 sentence insight.",
@@ -113,22 +145,23 @@ def trends():
     )
     return jsonify({"insight": insight})
 
-# ---------- timer (no AI needed) ----------------------------------------------
+# ---------- timer -------------------------------------------------------------
 
-# Timer is handled entirely on the front-end; this endpoint logs the session
-# and returns a motivational nudge when a session completes.
 @app.route("/api/timer-complete", methods=["POST"])
 def timer_complete():
-    body     = request.json
-    task     = body.get("task", "your task")
-    count    = body.get("sessionsCompleted", 1)
-    minutes  = body.get("minutes", 2)
-    now      = datetime.now().isoformat(timespec="seconds")
+    body    = request.json
+    task    = body.get("task", "your task")
+    count   = body.get("sessionsCompleted", 1)
+    minutes = body.get("minutes", 2)
+    now     = datetime.now().isoformat(timespec="seconds")
 
-    # Save the session
-    sessions = load_sessions()
-    sessions.append({"task": task, "minutes": minutes, "timestamp": now})
-    save_sessions(sessions)
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO sessions (task, minutes, timestamp) VALUES (?, ?, ?)",
+        (task, minutes, now)
+    )
+    conn.commit()
+    conn.close()
 
     msg = call_claude(
         f"The user just completed a {minutes}-minute focus session on '{task}'. "
@@ -137,9 +170,15 @@ def timer_complete():
     )
     return jsonify({"message": msg})
 
+
 @app.route("/api/sessions")
 def get_sessions():
-    return jsonify(load_sessions())
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT task, minutes, timestamp FROM sessions ORDER BY timestamp ASC"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
 
 # ---------- study assistant ---------------------------------------------------
 

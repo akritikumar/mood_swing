@@ -5,35 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MoodFlow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
 
-  <!-- ── SIDEBAR NAV ── -->
-  <nav class="sidebar">
-    <div class="logo">
-      <span class="logo-icon">🌸</span>
-      <span class="logo-text">MoodFlow</span>
+  <!-- ── TOP HEADER ── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">
+        <span class="logo-icon">🌸</span>
+        <span class="logo-text">MoodFlow</span>
+      </div>
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="mood">
+          <span class="tab-icon">✨</span>
+          <span class="tab-label">Today's Mood</span>
+        </button>
+        <button class="tab-btn" data-tab="timer">
+          <span class="tab-icon">⏱️</span>
+          <span class="tab-label">Focus Timer</span>
+        </button>
+        <button class="tab-btn" data-tab="journal">
+          <span class="tab-icon">📓</span>
+          <span class="tab-label">Journal</span>
+        </button>
+        <button class="tab-btn" data-tab="trends">
+          <span class="tab-icon">📈</span>
+          <span class="tab-label">Trends</span>
+        </button>
+      </nav>
     </div>
-    <ul class="nav-links">
-      <li><a href="#" class="nav-link active" data-tab="mood">
-        <span class="nav-icon">✨</span> Today's Mood
-      </a></li>
-      <li><a href="#" class="nav-link" data-tab="timer">
-        <span class="nav-icon">⏱️</span> Focus Timer
-      </a></li>
-      <li><a href="#" class="nav-link" data-tab="journal">
-        <span class="nav-icon">📓</span> Journal
-      </a></li>
-      <li><a href="#" class="nav-link" data-tab="trends">
-        <span class="nav-icon">📈</span> Trends
-      </a></li>
-    </ul>
-    <div class="sidebar-footer">made with 💗 for your wellbeing</div>
-  </nav>
+  </header>
 
-  <!-- ── MAIN CONTENT ── -->
+  <!-- ── PAGE CONTENT ── -->
   <main class="main">
 
     <!-- ════ TAB: MOOD ════ -->
@@ -42,7 +47,6 @@
         <h1 class="panel-title">How are you feeling today?</h1>
         <p class="panel-sub">Tap one emoji to capture your mood.</p>
       </div>
-
       <div class="emoji-grid" id="emojiGrid">
         <button class="emoji-btn" data-emoji="😊" data-label="happy">😊<span>Happy</span></button>
         <button class="emoji-btn" data-emoji="😌" data-label="calm">😌<span>Calm</span></button>
@@ -54,12 +58,10 @@
         <button class="emoji-btn" data-emoji="🤩" data-label="excited">🤩<span>Excited</span></button>
         <button class="emoji-btn" data-emoji="😑" data-label="numb">😑<span>Numb</span></button>
       </div>
-
       <div class="card suggestion-card hidden" id="suggestionCard">
         <div class="card-label">✨ Today's suggestion</div>
         <p id="suggestionText"></p>
       </div>
-
       <div class="loader hidden" id="moodLoader">
         <div class="spinner"></div><span>Getting your suggestion…</span>
       </div>
@@ -67,71 +69,65 @@
 
     <!-- ════ TAB: TIMER ════ -->
     <section class="tab-panel" id="tab-timer">
-      <div class="panel-header">
-        <h1 class="panel-title">Anti-Procrastination Timer</h1>
-        <p class="panel-sub">Break any task into focused sprints. Just start — that's the hardest part.</p>
-      </div>
+      <div class="two-col">
 
-      <div class="timer-card card">
-        <input class="task-input" id="taskInput" type="text" placeholder="What are you working on?" />
-
-        <div class="duration-selector">
-          <button class="duration-btn active" data-seconds="120">2 min</button>
-          <button class="duration-btn" data-seconds="300">5 min</button>
-          <button class="duration-btn" data-seconds="600">10 min</button>
-          <button class="duration-btn" data-seconds="900">15 min</button>
+        <div>
+          <div class="panel-header">
+            <h1 class="panel-title">Focus Timer</h1>
+            <p class="panel-sub">Break any task into focused sprints.</p>
+          </div>
+          <div class="timer-card card">
+            <input class="task-input" id="taskInput" type="text" placeholder="What are you working on?" />
+            <div class="duration-selector">
+              <button class="duration-btn active" data-seconds="120">2 min</button>
+              <button class="duration-btn" data-seconds="300">5 min</button>
+              <button class="duration-btn" data-seconds="600">10 min</button>
+              <button class="duration-btn" data-seconds="900">15 min</button>
+            </div>
+            <div class="timer-display" id="timerDisplay">2:00</div>
+            <div class="timer-controls">
+              <button class="btn btn-primary" id="startBtn">▶ Start</button>
+              <button class="btn btn-ghost" id="resetBtn">↺ Reset</button>
+            </div>
+            <div class="session-counter">Sessions completed today: <strong id="sessionCount">0</strong></div>
+          </div>
+          <div class="card celebration-card hidden" id="celebrationCard">
+            <div class="card-label">🎉 Great work!</div>
+            <p id="celebrationText"></p>
+          </div>
+          <div class="loader hidden" id="timerLoader">
+            <div class="spinner"></div><span>Getting your reward…</span>
+          </div>
         </div>
 
-        <div class="timer-display" id="timerDisplay">2:00</div>
-
-        <div class="timer-controls">
-          <button class="btn btn-primary" id="startBtn">▶ Start</button>
-          <button class="btn btn-ghost" id="resetBtn">↺ Reset</button>
+        <div>
+          <div class="panel-header">
+            <h1 class="panel-title">Study Assistant</h1>
+            <p class="panel-sub">Enter a topic and let AI help you study.</p>
+          </div>
+          <div class="card study-card">
+            <input class="task-input" id="studyTopic" type="text" placeholder="e.g. The French Revolution, Photosynthesis…" />
+            <div class="study-mode-row">
+              <label>I want to:</label>
+              <select id="studyMode">
+                <option value="explain">📖 Explain it simply</option>
+                <option value="quiz">❓ Quiz me on it</option>
+                <option value="summarize">📝 Give me a summary</option>
+                <option value="flashcards">🃏 Make flashcards</option>
+                <option value="essay">✍️ Help me outline an essay</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="studyBtn" style="margin-top:1rem;width:100%;justify-content:center">Let's go ✨</button>
+          </div>
+          <div class="loader hidden" id="studyLoader">
+            <div class="spinner"></div><span>Preparing your study material…</span>
+          </div>
+          <div class="card study-result-card hidden" id="studyResultCard">
+            <div class="card-label" id="studyResultLabel">📚 Study material</div>
+            <div id="studyResultText"></div>
+          </div>
         </div>
 
-        <div class="session-counter">
-          Sessions completed today: <strong id="sessionCount">0</strong>
-        </div>
-      </div>
-
-      <div class="card celebration-card hidden" id="celebrationCard">
-        <div class="card-label">🎉 Great work!</div>
-        <p id="celebrationText"></p>
-      </div>
-
-      <div class="loader hidden" id="timerLoader">
-        <div class="spinner"></div><span>Getting your reward…</span>
-      </div>
-
-      <!-- ── STUDY ASSISTANT ── -->
-      <div class="panel-header" style="margin-top: 3rem;">
-        <h2 class="panel-title" style="font-size:1.5rem">📚 Study Assistant</h2>
-        <p class="panel-sub">Enter a topic and let AI help you study it.</p>
-      </div>
-
-      <div class="card study-card">
-        <input class="task-input" id="studyTopic" type="text" placeholder="e.g. The French Revolution, Photosynthesis, Calculus derivatives…" style="margin-bottom:1rem" />
-
-        <div class="study-mode-row">
-          <label>I want to:</label>
-          <select id="studyMode">
-            <option value="explain">📖 Explain it simply</option>
-            <option value="quiz">❓ Quiz me on it</option>
-            <option value="summarize">📝 Give me a summary</option>
-            <option value="flashcards">🃏 Make flashcards</option>
-            <option value="essay">✍️ Help me outline an essay</option>
-          </select>
-          <button class="btn btn-primary" id="studyBtn">Let's go ✨</button>
-        </div>
-      </div>
-
-      <div class="loader hidden" id="studyLoader">
-        <div class="spinner"></div><span>Preparing your study material…</span>
-      </div>
-
-      <div class="card study-result-card hidden" id="studyResultCard">
-        <div class="card-label" id="studyResultLabel">📚 Study material</div>
-        <div id="studyResultText"></div>
       </div>
     </section>
 
@@ -141,80 +137,83 @@
         <h1 class="panel-title">Journal</h1>
         <p class="panel-sub">A gentle space to reflect and grow.</p>
       </div>
-
-      <div class="journal-mood-row">
-        <label>Current mood:</label>
-        <select id="journalMoodSelect">
-          <option value="happy">😊 Happy</option>
-          <option value="calm">😌 Calm</option>
-          <option value="grateful">🥰 Grateful</option>
-          <option value="frustrated">😤 Frustrated</option>
-          <option value="sad">😔 Sad</option>
-          <option value="anxious">😰 Anxious</option>
-          <option value="tired">😴 Tired</option>
-          <option value="excited">🤩 Excited</option>
-        </select>
-        <button class="btn btn-secondary" id="getPromptBtn">Get a prompt ✨</button>
-      </div>
-
-      <div class="card prompt-card hidden" id="promptCard">
-        <div class="card-label">📓 Today's prompt</div>
-        <p id="promptText"></p>
-      </div>
-
-      <div class="loader hidden" id="promptLoader">
-        <div class="spinner"></div><span>Crafting your prompt…</span>
-      </div>
-
-      <textarea class="journal-textarea" id="journalEntry" placeholder="Start writing here… there's no right or wrong."></textarea>
-
-      <button class="btn btn-primary" id="reflectBtn">Get reflection 💬</button>
-
-      <div class="card reflection-card hidden" id="reflectionCard">
-        <div class="card-label">💬 Reflection</div>
-        <p id="reflectionText"></p>
-      </div>
-
-      <div class="loader hidden" id="reflectLoader">
-        <div class="spinner"></div><span>Reading your entry…</span>
+      <div class="journal-layout">
+        <div class="journal-prompt-col">
+          <div class="journal-mood-row">
+            <label>Current mood:</label>
+            <select id="journalMoodSelect">
+              <option value="happy">😊 Happy</option>
+              <option value="calm">😌 Calm</option>
+              <option value="grateful">🥰 Grateful</option>
+              <option value="frustrated">😤 Frustrated</option>
+              <option value="sad">😔 Sad</option>
+              <option value="anxious">😰 Anxious</option>
+              <option value="tired">😴 Tired</option>
+              <option value="excited">🤩 Excited</option>
+            </select>
+            <button class="btn btn-secondary" id="getPromptBtn">Get a prompt ✨</button>
+          </div>
+          <div class="card prompt-card hidden" id="promptCard">
+            <div class="card-label">📓 Today's prompt</div>
+            <p id="promptText"></p>
+          </div>
+          <div class="loader hidden" id="promptLoader">
+            <div class="spinner"></div><span>Crafting your prompt…</span>
+          </div>
+        </div>
+        <div class="journal-write-col">
+          <textarea class="journal-textarea" id="journalEntry" placeholder="Start writing here… there's no right or wrong."></textarea>
+          <button class="btn btn-primary" id="reflectBtn" style="width:100%;justify-content:center;margin-top:.75rem">Get reflection 💬</button>
+          <div class="card reflection-card hidden" id="reflectionCard" style="margin-top:1rem">
+            <div class="card-label">💬 Reflection</div>
+            <p id="reflectionText"></p>
+          </div>
+          <div class="loader hidden" id="reflectLoader" style="margin-top:.75rem">
+            <div class="spinner"></div><span>Reading your entry…</span>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- ════ TAB: TRENDS ════ -->
     <section class="tab-panel" id="tab-trends">
       <div class="panel-header">
-        <h1 class="panel-title">Your Mood Trends</h1>
-        <p class="panel-sub">Patterns in your emotional landscape.</p>
+        <h1 class="panel-title">Your Trends</h1>
+        <p class="panel-sub">Patterns in your emotional landscape and study habits.</p>
       </div>
-
-      <div class="chart-wrapper">
-        <canvas id="moodChart"></canvas>
-      </div>
-
-      <button class="btn btn-secondary" id="insightBtn" style="margin-top:1.5rem">✨ Get AI insight</button>
-
-      <div class="card insight-card hidden" id="insightCard">
-        <div class="card-label">🔍 Trend insight</div>
-        <p id="insightText"></p>
-      </div>
-
-      <div class="loader hidden" id="insightLoader">
-        <div class="spinner"></div><span>Analyzing your moods…</span>
-      </div>
-
-      <!-- ── STUDY SESSIONS DOT PLOT ── -->
-      <div class="panel-header" style="margin-top: 3rem;">
-        <h2 class="panel-title" style="font-size:1.5rem">⏱️ Study Sessions</h2>
-        <p class="panel-sub">How often you've used each timer duration. Hover over a dot to see the session name.</p>
-      </div>
-
-      <div class="chart-wrapper">
-        <canvas id="sessionChart"></canvas>
-        <p class="chart-empty hidden" id="sessionEmpty">No sessions logged yet — complete a timer to see your data here! 🌱</p>
+      <div class="trends-grid">
+        <div class="trend-block">
+          <div class="trend-block-header">
+            <span class="trend-block-title">😊 Daily Mood</span>
+            <button class="btn btn-secondary btn-sm" id="insightBtn">✨ AI insight</button>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="moodChart"></canvas>
+          </div>
+          <div class="card insight-card hidden" id="insightCard">
+            <div class="card-label">🔍 Trend insight</div>
+            <p id="insightText"></p>
+          </div>
+          <div class="loader hidden" id="insightLoader">
+            <div class="spinner"></div><span>Analyzing your moods…</span>
+          </div>
+        </div>
+        <div class="trend-block">
+          <div class="trend-block-header">
+            <span class="trend-block-title">⏱️ Study Sessions</span>
+          </div>
+          <p class="trend-block-sub">Hover over a dot to see the task name.</p>
+          <div class="chart-wrapper">
+            <canvas id="sessionChart"></canvas>
+            <p class="chart-empty hidden" id="sessionEmpty">No sessions yet — complete a timer to see data here! 🌱</p>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
+
+  <footer class="footer">made with 💗 for your wellbeing</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/static/js/app.js"></script>
