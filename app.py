@@ -37,6 +37,18 @@ def init_db():
         )
     """)
 
+    # Table 3: user tasks with priority and progress
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            title      TEXT    NOT NULL,
+            priority   INTEGER NOT NULL DEFAULT 2,
+            progress   INTEGER NOT NULL DEFAULT 0,
+            done       INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT    NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -179,6 +191,79 @@ def get_sessions():
     ).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
+# ---------- tasks -------------------------------------------------------------
+
+@app.route("/api/tasks", methods=["GET"])
+def get_tasks():
+    conn = get_db()
+    # Order by: incomplete first, then priority descending (3=high on top), then created date
+    rows = conn.execute("""
+        SELECT id, title, priority, progress, done, created_at
+        FROM tasks
+        ORDER BY done ASC, priority DESC, created_at ASC
+    """).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/tasks", methods=["POST"])
+def add_task():
+    body     = request.json
+    title    = body.get("title", "").strip()
+    priority = int(body.get("priority", 2))
+    if not title:
+        return jsonify({"error": "Title is required"}), 400
+    now = datetime.now().isoformat(timespec="seconds")
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO tasks (title, priority, progress, done, created_at) VALUES (?, ?, 0, 0, ?)",
+        (title, priority, now)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
+def update_task(task_id):
+    body = request.json
+    conn = get_db()
+    if "progress" in body:
+        progress = max(0, min(100, int(body["progress"])))
+        # Auto-mark done when progress hits 100
+        done = 1 if progress == 100 else 0
+        conn.execute(
+            "UPDATE tasks SET progress = ?, done = ? WHERE id = ?",
+            (progress, done, task_id)
+        )
+    if "priority" in body:
+        conn.execute(
+            "UPDATE tasks SET priority = ? WHERE id = ?",
+            (int(body["priority"]), task_id)
+        )
+    if "done" in body:
+        done = 1 if body["done"] else 0
+        progress = 100 if done else conn.execute(
+            "SELECT progress FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()["progress"]
+        conn.execute(
+            "UPDATE tasks SET done = ?, progress = ? WHERE id = ?",
+            (done, progress, task_id)
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+def delete_task(task_id):
+    conn = get_db()
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
 
 # ---------- study assistant ---------------------------------------------------
 

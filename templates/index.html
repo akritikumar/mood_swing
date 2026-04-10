@@ -14,7 +14,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="logo">
-        <span class="logo-icon">🌸</span>
+        <span class="logo-icon">️🌲</span>
         <span class="logo-text">MoodFlow</span>
       </div>
       <nav class="tab-nav">
@@ -25,6 +25,10 @@
         <button class="tab-btn" data-tab="timer">
           <span class="tab-icon">⏱️</span>
           <span class="tab-label">Focus Timer</span>
+        </button>
+        <button class="tab-btn" data-tab="tasks">
+          <span class="tab-icon">✅</span>
+          <span class="tab-label">Tasks</span>
         </button>
         <button class="tab-btn" data-tab="journal">
           <span class="tab-icon">📓</span>
@@ -129,6 +133,34 @@
         </div>
 
       </div>
+    </section>
+
+    <!-- ════ TAB: TASKS ════ -->
+    <section class="tab-panel" id="tab-tasks">
+      <div class="panel-header">
+        <h1 class="panel-title">Task Tracker</h1>
+        <p class="panel-sub">Add tasks, set their importance, and track your progress.</p>
+      </div>
+
+      <!-- Add task form -->
+      <div class="card add-task-card">
+        <div class="add-task-row">
+          <input class="task-input" id="newTaskTitle" type="text" placeholder="What do you need to do?" style="margin-bottom:0;flex:1" />
+          <div class="priority-select-wrap">
+            <label class="priority-label">Importance:</label>
+            <div class="priority-pills" id="newTaskPriority">
+              <button class="priority-pill" data-value="1">Low</button>
+              <button class="priority-pill active" data-value="2">Medium</button>
+              <button class="priority-pill" data-value="3">High</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="addTaskBtn">+ Add</button>
+        </div>
+      </div>
+
+      <!-- Task list -->
+      <div id="taskList" class="task-list"></div>
+      <p class="chart-empty hidden" id="taskEmpty">No tasks yet — add one above! 🌿</p>
     </section>
 
     <!-- ════ TAB: JOURNAL ════ -->
