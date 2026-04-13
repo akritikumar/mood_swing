@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import os
+import traceback
 from datetime import datetime, date
 import anthropic
 
@@ -49,6 +50,28 @@ def init_db():
         )
     """)
 
+    # Table 4: subject/topic labels with color codes
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS labels (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT    NOT NULL,
+            color      TEXT    NOT NULL DEFAULT '#723d46',
+            created_at TEXT    NOT NULL
+        )
+    """)
+
+    # Table 5: scheduled blocks assigned to a date with a label and duration
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS schedule_blocks (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            date       TEXT    NOT NULL,
+            label_id   INTEGER NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
+            minutes    INTEGER NOT NULL DEFAULT 60,
+            note       TEXT    NOT NULL DEFAULT '',
+            created_at TEXT    NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -68,7 +91,7 @@ init_db()
 def call_claude(prompt: str, system: str = "") -> str:
     client = anthropic.Anthropic()   # reads ANTHROPIC_API_KEY from env
     msg = client.messages.create(
-        model="claude-opus-4-5",
+        model="claude-opus-4-5-20251101",
         max_tokens=512,
         system=system or "You are a warm, supportive wellness companion. Keep responses concise, kind, and practical.",
         messages=[{"role": "user", "content": prompt}]
@@ -85,25 +108,29 @@ def index():
 
 @app.route("/api/log-mood", methods=["POST"])
 def log_mood():
-    body  = request.json
-    emoji = body.get("emoji")
-    label = body.get("label")
-    today = date.today().isoformat()
+    try:
+        body  = request.json
+        emoji = body.get("emoji")
+        label = body.get("label")
+        today = date.today().isoformat()
 
-    conn = get_db()
-    # INSERT OR REPLACE enforces one entry per day (UNIQUE constraint on date)
-    conn.execute(
-        "INSERT OR REPLACE INTO moods (date, emoji, label) VALUES (?, ?, ?)",
-        (today, emoji, label)
-    )
-    conn.commit()
-    conn.close()
+        conn = get_db()
+        # INSERT OR REPLACE enforces one entry per day (UNIQUE constraint on date)
+        conn.execute(
+            "INSERT OR REPLACE INTO moods (date, emoji, label) VALUES (?, ?, ?)",
+            (today, emoji, label)
+        )
+        conn.commit()
+        conn.close()
 
-    suggestion = call_claude(
-        f"The user feels {label} today (emoji: {emoji}). "
-        "Give them one warm, specific activity suggestion in 2-3 sentences."
-    )
-    return jsonify({"suggestion": suggestion})
+        suggestion = call_claude(
+            f"The user feels {label} today (emoji: {emoji}). "
+            "Give them one warm, specific activity suggestion in 2-3 sentences."
+        )
+        return jsonify({"suggestion": suggestion})
+    except Exception as e:
+        traceback.print_exc()  # shows full error in PyCharm terminal
+        return jsonify({"suggestion": f"Error: {str(e)}"}), 500
 
 
 @app.route("/api/moods")
@@ -286,6 +313,100 @@ def study():
         system="You are a helpful, encouraging study tutor. Be clear, structured, and student-friendly."
     )
     return jsonify({"result": result})
+
+
+# ---------- labels ------------------------------------------------------------
+
+@app.route("/api/labels", methods=["GET"])
+def get_labels():
+    conn = get_db()
+    rows = conn.execute("SELECT id, name, color FROM labels ORDER BY created_at ASC").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/labels", methods=["POST"])
+def add_label():
+    body  = request.json
+    name  = body.get("name", "").strip()
+    color = body.get("color", "#723d46")
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    now = datetime.now().isoformat(timespec="seconds")
+    conn = get_db()
+    conn.execute("INSERT INTO labels (name, color, created_at) VALUES (?, ?, ?)", (name, color, now))
+    conn.commit()
+    row = conn.execute("SELECT id, name, color FROM labels WHERE created_at = ? ORDER BY id DESC LIMIT 1", (now,)).fetchone()
+    conn.close()
+    return jsonify(dict(row))
+
+@app.route("/api/labels/<int:label_id>", methods=["DELETE"])
+def delete_label(label_id):
+    conn = get_db()
+    conn.execute("DELETE FROM labels WHERE id = ?", (label_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+# ---------- schedule blocks ---------------------------------------------------
+
+@app.route("/api/schedule", methods=["GET"])
+def get_schedule():
+    # Optional ?start=YYYY-MM-DD&end=YYYY-MM-DD filtering
+    start = request.args.get("start")
+    end   = request.args.get("end")
+    conn  = get_db()
+    if start and end:
+        rows = conn.execute("""
+            SELECT sb.id, sb.date, sb.minutes, sb.note,
+                   l.id as label_id, l.name as label_name, l.color as label_color
+            FROM schedule_blocks sb
+            JOIN labels l ON sb.label_id = l.id
+            WHERE sb.date BETWEEN ? AND ?
+            ORDER BY sb.date ASC, sb.created_at ASC
+        """, (start, end)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT sb.id, sb.date, sb.minutes, sb.note,
+                   l.id as label_id, l.name as label_name, l.color as label_color
+            FROM schedule_blocks sb
+            JOIN labels l ON sb.label_id = l.id
+            ORDER BY sb.date ASC, sb.created_at ASC
+        """).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+@app.route("/api/schedule", methods=["POST"])
+def add_block():
+    body     = request.json
+    date_str = body.get("date")
+    label_id = body.get("label_id")
+    minutes  = int(body.get("minutes", 60))
+    note     = body.get("note", "")
+    if not date_str or not label_id:
+        return jsonify({"error": "date and label_id required"}), 400
+    now = datetime.now().isoformat(timespec="seconds")
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO schedule_blocks (date, label_id, minutes, note, created_at) VALUES (?, ?, ?, ?, ?)",
+        (date_str, label_id, minutes, note, now)
+    )
+    conn.commit()
+    row = conn.execute("""
+        SELECT sb.id, sb.date, sb.minutes, sb.note,
+               l.id as label_id, l.name as label_name, l.color as label_color
+        FROM schedule_blocks sb JOIN labels l ON sb.label_id = l.id
+        WHERE sb.created_at = ? ORDER BY sb.id DESC LIMIT 1
+    """, (now,)).fetchone()
+    conn.close()
+    return jsonify(dict(row))
+
+@app.route("/api/schedule/<int:block_id>", methods=["DELETE"])
+def delete_block(block_id):
+    conn = get_db()
+    conn.execute("DELETE FROM schedule_blocks WHERE id = ?", (block_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

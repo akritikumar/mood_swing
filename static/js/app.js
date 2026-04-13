@@ -562,3 +562,277 @@ async function patch(url, body) {
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCHEDULE
+══════════════════════════════════════════════════════════════════════════ */
+
+// ── state ──
+let scheduleView    = 'week';     // 'week' | 'month'
+let calOffset       = 0;          // weeks or months offset from today
+let allLabels       = [];
+let allBlocks       = [];
+let modalDate       = null;
+let selectedColor   = '#723d46';
+let selectedMinutes = 60;
+
+// ── load schedule tab when clicked ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  if (btn.dataset.tab === 'schedule') {
+    btn.addEventListener('click', initSchedule);
+  }
+});
+
+async function initSchedule() {
+  await Promise.all([loadLabels(), loadBlocks()]);
+  renderCalendar();
+}
+
+// ── labels ──
+async function loadLabels() {
+  allLabels = await (await fetch('/api/labels')).json();
+  renderLabelsList();
+  renderModalLabelSelect();
+}
+
+function renderLabelsList() {
+  const list  = document.getElementById('labelsList');
+  const empty = document.getElementById('labelsEmpty');
+  if (!allLabels.length) { list.innerHTML = ''; list.appendChild(empty); show(empty); return; }
+  hide(empty);
+  list.innerHTML = allLabels.map(l => `
+    <div class="label-chip">
+      <span class="label-dot" style="background:${l.color}"></span>
+      <span class="label-chip-name">${escapeHtml(l.name)}</span>
+      <button class="label-chip-del" data-id="${l.id}" title="Delete">✕</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.label-chip-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/labels/${btn.dataset.id}`, { method: 'DELETE' });
+      await loadLabels();
+      await loadBlocks();
+      renderCalendar();
+    });
+  });
+}
+
+function renderModalLabelSelect() {
+  const sel = document.getElementById('modalLabelSelect');
+  sel.innerHTML = allLabels.length
+    ? allLabels.map(l => `<option value="${l.id}">${l.name}</option>`).join('')
+    : '<option value="">No labels yet</option>';
+}
+
+// color swatch picker
+document.querySelectorAll('#colorSwatches .swatch:not(.swatch-custom)').forEach(s => {
+  s.addEventListener('click', () => {
+    document.querySelectorAll('#colorSwatches .swatch').forEach(x => x.classList.remove('active'));
+    s.classList.add('active');
+    selectedColor = s.dataset.color;
+    document.getElementById('customColor').value = selectedColor;
+  });
+});
+document.getElementById('customColor').addEventListener('input', e => {
+  document.querySelectorAll('#colorSwatches .swatch').forEach(x => x.classList.remove('active'));
+  e.target.classList.add('active');
+  selectedColor = e.target.value;
+});
+
+document.getElementById('addLabelBtn').addEventListener('click', async () => {
+  const name = document.getElementById('labelNameInput').value.trim();
+  if (!name) { document.getElementById('labelNameInput').focus(); return; }
+  await post('/api/labels', { name, color: selectedColor });
+  document.getElementById('labelNameInput').value = '';
+  await loadLabels();
+});
+
+// ── blocks ──
+async function loadBlocks() {
+  allBlocks = await (await fetch('/api/schedule')).json();
+}
+
+function blocksForDate(dateStr) {
+  return allBlocks.filter(b => b.date === dateStr);
+}
+
+// ── calendar rendering ──
+function renderCalendar() {
+  scheduleView === 'week' ? renderWeek() : renderMonth();
+}
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtMinutes(m) {
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60), min = m % 60;
+  return min ? `${h}h ${min}m` : `${h}h`;
+}
+
+function renderWeek() {
+  const today   = new Date();
+  const monday  = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) + calOffset * 7);
+
+  const days = Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+
+  // title
+  const opts = { month: 'short', day: 'numeric' };
+  document.getElementById('calTitle').textContent =
+    `${days[0].toLocaleDateString('en-US', opts)} – ${days[6].toLocaleDateString('en-US', {...opts, year: 'numeric'})}`;
+
+  const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = `
+    <div class="cal-week-header">
+      ${DAY_NAMES.map(n => `<div class="cal-day-name">${n}</div>`).join('')}
+    </div>
+    <div class="cal-week-body">
+      ${days.map(d => buildCell(d, true)).join('')}
+    </div>
+  `;
+  attachCellListeners();
+}
+
+function renderMonth() {
+  const today = new Date();
+  const ref   = new Date(today.getFullYear(), today.getMonth() + calOffset, 1);
+  const year  = ref.getFullYear();
+  const month = ref.getMonth();
+
+  document.getElementById('calTitle').textContent =
+    ref.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // first cell = Monday of the week containing the 1st
+  const firstDay = new Date(year, month, 1);
+  const startOff = (firstDay.getDay() + 6) % 7;
+  const start    = new Date(firstDay);
+  start.setDate(1 - startOff);
+
+  // build 6 weeks
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    cells.push(d);
+  }
+
+  const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = `
+    <div class="cal-month-header">
+      ${DAY_NAMES.map(n => `<div class="cal-day-name">${n}</div>`).join('')}
+    </div>
+    <div class="cal-month-body">
+      ${cells.map(d => buildCell(d, false, d.getMonth() !== month)).join('')}
+    </div>
+  `;
+  attachCellListeners();
+}
+
+function buildCell(d, isWeek = false, otherMonth = false) {
+  const ds      = isoDate(d);
+  const todayDs = isoDate(new Date());
+  const isToday = ds === todayDs;
+  const blocks  = blocksForDate(ds);
+
+  const pillsHtml = blocks.map(b => `
+    <div class="block-pill" style="background:${b.label_color}" data-id="${b.id}">
+      <span>${escapeHtml(b.label_name)}</span>
+      <span class="block-pill-time">${fmtMinutes(b.minutes)}</span>
+      <button class="block-pill-del" data-id="${b.id}" title="Remove">✕</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="cal-cell ${isWeek ? 'week-cell' : ''} ${isToday ? 'today' : ''} ${otherMonth ? 'other-month' : ''}"
+         data-date="${ds}">
+      <span class="cal-date-num">${d.getDate()}</span>
+      ${pillsHtml}
+      <button class="cal-add-btn" data-date="${ds}" title="Add block">+</button>
+    </div>
+  `;
+}
+
+function attachCellListeners() {
+  // clicking a cell or its + button opens the modal
+  document.querySelectorAll('.cal-cell').forEach(cell => {
+    cell.addEventListener('click', e => {
+      if (e.target.closest('.block-pill-del')) return;
+      openModal(cell.dataset.date);
+    });
+  });
+  // delete a block pill
+  document.querySelectorAll('.block-pill-del').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      await fetch(`/api/schedule/${btn.dataset.id}`, { method: 'DELETE' });
+      await loadBlocks();
+      renderCalendar();
+    });
+  });
+}
+
+// ── modal ──
+function openModal(dateStr) {
+  if (!allLabels.length) { alert('Create at least one label first!'); return; }
+  modalDate = dateStr;
+  const d = new Date(dateStr + 'T00:00:00');
+  document.getElementById('modalDateLabel').textContent =
+    d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  // reset duration selection
+  selectedMinutes = 60;
+  document.querySelectorAll('.dur-pill').forEach(p => {
+    p.classList.toggle('active', parseInt(p.dataset.minutes) === 60);
+  });
+  document.getElementById('modalNote').value = '';
+  show(document.getElementById('blockModal'));
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  hide(document.getElementById('blockModal'));
+});
+document.getElementById('blockModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('blockModal')) hide(document.getElementById('blockModal'));
+});
+
+document.querySelectorAll('.dur-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.dur-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    selectedMinutes = parseInt(pill.dataset.minutes);
+  });
+});
+
+document.getElementById('modalSaveBtn').addEventListener('click', async () => {
+  const labelId = document.getElementById('modalLabelSelect').value;
+  const note    = document.getElementById('modalNote').value.trim();
+  if (!labelId) { alert('Please select a label.'); return; }
+  await post('/api/schedule', { date: modalDate, label_id: parseInt(labelId), minutes: selectedMinutes, note });
+  hide(document.getElementById('blockModal'));
+  await loadBlocks();
+  renderCalendar();
+});
+
+// ── toolbar controls ──
+document.getElementById('weekViewBtn').addEventListener('click', () => {
+  scheduleView = 'week'; calOffset = 0;
+  document.getElementById('weekViewBtn').classList.add('active');
+  document.getElementById('monthViewBtn').classList.remove('active');
+  renderCalendar();
+});
+document.getElementById('monthViewBtn').addEventListener('click', () => {
+  scheduleView = 'month'; calOffset = 0;
+  document.getElementById('monthViewBtn').classList.add('active');
+  document.getElementById('weekViewBtn').classList.remove('active');
+  renderCalendar();
+});
+document.getElementById('calPrev').addEventListener('click', () => { calOffset--; renderCalendar(); });
+document.getElementById('calNext').addEventListener('click', () => { calOffset++; renderCalendar(); });
+document.getElementById('calTodayBtn').addEventListener('click', () => { calOffset = 0; renderCalendar(); });

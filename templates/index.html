@@ -14,7 +14,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="logo">
-        <span class="logo-icon">️🌲</span>
+        <span class="logo-icon">🌸</span>
         <span class="logo-text">MoodFlow</span>
       </div>
       <nav class="tab-nav">
@@ -33,6 +33,10 @@
         <button class="tab-btn" data-tab="journal">
           <span class="tab-icon">📓</span>
           <span class="tab-label">Journal</span>
+        </button>
+        <button class="tab-btn" data-tab="schedule">
+          <span class="tab-icon">📅</span>
+          <span class="tab-label">Schedule</span>
         </button>
         <button class="tab-btn" data-tab="trends">
           <span class="tab-icon">📈</span>
@@ -239,6 +243,93 @@
             <canvas id="sessionChart"></canvas>
             <p class="chart-empty hidden" id="sessionEmpty">No sessions yet — complete a timer to see data here! 🌱</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════ TAB: SCHEDULE ════ -->
+    <section class="tab-panel" id="tab-schedule">
+      <div class="panel-header">
+        <h1 class="panel-title">Study Schedule</h1>
+        <p class="panel-sub">Plan your week or month with color-coded subject labels.</p>
+      </div>
+
+      <div class="schedule-layout">
+
+        <!-- ── LEFT: Labels manager ── -->
+        <aside class="labels-panel">
+          <div class="labels-panel-header">
+            <span class="labels-panel-title">📌 Labels</span>
+          </div>
+
+          <div class="add-label-form card">
+            <input class="task-input" id="labelNameInput" type="text" placeholder="e.g. AP Biology" style="margin-bottom:.75rem" />
+            <div class="color-row">
+              <label class="color-row-label">Color:</label>
+              <div class="color-swatches" id="colorSwatches">
+                <button class="swatch active" data-color="#723d46" style="background:#723d46" title="Wine"></button>
+                <button class="swatch" data-color="#e26d5c" style="background:#e26d5c" title="Coral"></button>
+                <button class="swatch" data-color="#ffe1a8" style="background:#ffe1a8" title="Butter"></button>
+                <button class="swatch" data-color="#c9cba3" style="background:#c9cba3" title="Sage"></button>
+                <input class="swatch swatch-custom" id="customColor" type="color" value="#723d46" title="Custom color" />
+              </div>
+            </div>
+            <button class="btn btn-primary" id="addLabelBtn" style="width:100%;justify-content:center;margin-top:.85rem">+ Add Label</button>
+          </div>
+
+          <div class="labels-list" id="labelsList">
+            <p class="chart-empty" id="labelsEmpty">No labels yet — add one above!</p>
+          </div>
+        </aside>
+
+        <!-- ── RIGHT: Calendar ── -->
+        <div class="calendar-panel">
+
+          <!-- view toggle + nav -->
+          <div class="cal-toolbar">
+            <div class="view-toggle">
+              <button class="view-btn active" id="weekViewBtn">Week</button>
+              <button class="view-btn" id="monthViewBtn">Month</button>
+            </div>
+            <div class="cal-nav">
+              <button class="cal-nav-btn" id="calPrev">‹</button>
+              <span class="cal-title" id="calTitle"></span>
+              <button class="cal-nav-btn" id="calNext">›</button>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="calTodayBtn">Today</button>
+          </div>
+
+          <!-- calendar grid -->
+          <div id="calGrid" class="cal-grid"></div>
+
+        </div>
+      </div>
+
+      <!-- ── Add block modal ── -->
+      <div class="modal-backdrop hidden" id="blockModal">
+        <div class="modal-card card">
+          <div class="modal-header">
+            <span class="modal-title">Add Study Block</span>
+            <button class="modal-close" id="modalClose">✕</button>
+          </div>
+          <p class="modal-date" id="modalDateLabel"></p>
+
+          <label class="field-label">Subject label</label>
+          <select id="modalLabelSelect" class="modal-select"></select>
+
+          <label class="field-label" style="margin-top:.85rem">Duration</label>
+          <div class="duration-pills" id="modalDuration">
+            <button class="dur-pill active" data-minutes="30">30 min</button>
+            <button class="dur-pill" data-minutes="60">1 hr</button>
+            <button class="dur-pill" data-minutes="90">1.5 hr</button>
+            <button class="dur-pill" data-minutes="120">2 hr</button>
+            <button class="dur-pill" data-minutes="180">3 hr</button>
+          </div>
+
+          <label class="field-label" style="margin-top:.85rem">Note <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <input class="task-input" id="modalNote" type="text" placeholder="e.g. Chapter 5 review" style="margin-bottom:0" />
+
+          <button class="btn btn-primary" id="modalSaveBtn" style="width:100%;justify-content:center;margin-top:1.1rem">Save Block</button>
         </div>
       </div>
     </section>
